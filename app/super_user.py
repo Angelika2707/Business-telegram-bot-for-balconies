@@ -1,12 +1,13 @@
 from aiogram import Router
 from aiogram.types import Message
-from aiogram.filters import CommandStart
+import app.database.requests as db
+from aiogram.filters import Command
 
 # File for handles commands from super users
 
 router_super_users = Router()
 
 
-@router_super_users.message(commands=['example'])
+@router_super_users.message(Command("example"))
 async def start_command(message: Message):
     await message.answer("super user")

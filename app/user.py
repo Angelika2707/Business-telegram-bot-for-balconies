@@ -7,6 +7,7 @@ from aiogram.filters import CommandStart
 
 router_users = Router()
 
+
 @router_users.message(CommandStart())
 async def start_command(message: Message):
     await message.answer("Hello World!")

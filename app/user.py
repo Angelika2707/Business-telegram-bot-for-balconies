@@ -83,7 +83,8 @@ async def continue_registration(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("Введите Ваше ФИО")
         await state.set_state(BotStates.waiting_for_user_data)
     else:
-        await callback.message.answer("Вас нет в базе данных, попросите одного из суперпользователей Вас добавить")
+        await callback.message.answer("Вас нет в базе данных, попросите одного из суперпользователей Вас добавить и"
+                                      "затем введите /start")
         await state.clear()
 
 

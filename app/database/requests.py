@@ -1,3 +1,4 @@
+import os
 from app.database.models import UnregisteredUsers, RegisteredUsers, RegisteredSuperUsers, engine, async_session
 from sqlalchemy import insert, select, delete
 import xlsxwriter
@@ -79,7 +80,13 @@ async def delete_super_user(phone: str) -> None:
 
 
 async def create_exel_file() -> None:
-    workbook = xlsxwriter.Workbook('app/documents/Партнёры.xlsx')
+    directory = 'app/documents/'
+    filename = 'Партнёры.xlsx'
+    filepath = os.path.join(directory, filename)
+
+    os.makedirs(directory, exist_ok=True)
+
+    workbook = xlsxwriter.Workbook(filepath)
     worksheet = workbook.add_worksheet("Информация")
 
     headers = ['Номер телефона', "Имя", "Фамилия", "Отчество", "Вопрос"]

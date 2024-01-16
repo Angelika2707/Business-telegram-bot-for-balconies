@@ -64,10 +64,8 @@ async def delete_unregistered_user(phone: str) -> None:
         await connection.commit()
 
 
-async def delete_user(phone: str, name: str, surname: str, patronymic: str, question: str) -> None:
-    statement = delete(RegisteredUsers).where(RegisteredUsers.number == phone, RegisteredUsers.surname == surname,
-                                              RegisteredUsers.patronymic == patronymic,
-                                              RegisteredUsers.question == question, RegisteredUsers.name == name)
+async def delete_user(phone: str) -> None:
+    statement = delete(RegisteredUsers).where(RegisteredUsers.number == phone)
     async with engine.connect() as connection:
         await connection.execute(statement)
         await connection.commit()

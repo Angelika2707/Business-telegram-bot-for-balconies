@@ -6,6 +6,7 @@ from aiogram.filters import CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from app.super_user import SuperUserStates
 
 # File for handles commands from users
 
@@ -57,10 +58,19 @@ async def incorrect_phone_number(callback: CallbackQuery, state: FSMContext):
 
 @router_users.callback_query(F.data == "correct_number")
 async def correct_phone_number(callback: CallbackQuery, state: FSMContext):
-    continue_button = InlineKeyboardButton(text="Продолжить!", callback_data="continue_reg")
-    builder = InlineKeyboardBuilder()
-    builder.add(continue_button)
-    await callback.message.answer("Номер верный! Продолжите регистрацию", reply_markup=builder.as_markup())
+    data = await state.get_data()
+    phone_number = data.get("phone_number")
+    if await db.check_super_user(phone_number):
+        continue_button = InlineKeyboardButton(text="Продолжить", callback_data="go_to_super")
+        builder = InlineKeyboardBuilder()
+        builder.add(continue_button)
+        await callback.message.answer("У Вас есть права суперпользователя. Вы готовы продолжить регистрацию?",
+                                      reply_markup=builder.as_markup())
+    else:
+        continue_button = InlineKeyboardButton(text="Продолжить!", callback_data="continue_reg")
+        builder = InlineKeyboardBuilder()
+        builder.add(continue_button)
+        await callback.message.answer("Номер верный! Продолжите регистрацию", reply_markup=builder.as_markup())
 
 
 @router_users.callback_query(F.data == "continue_reg")
@@ -68,10 +78,13 @@ async def continue_registration(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     phone_number = data.get("phone_number")
 
-    if db.check_unregistered_user(phone_number):
+    if await db.check_unregistered_user(phone_number):
         await db.delete_unregistered_user(phone_number)
         await callback.message.answer("Введите Ваше ФИО")
         await state.set_state(BotStates.waiting_for_user_data)
+    else:
+        await callback.message.answer("Вас нет в базе данных, попросите одного из суперпользователей Вас добавить")
+        await state.clear()
 
 
 @router_users.message(BotStates.waiting_for_user_data)

@@ -13,7 +13,7 @@ import app.database.requests as db
 async def main():
     await create_database()
 
-    await db.insert_super_user("89879271157", True) # insert super user
+    await db.insert_super_user("89879271157", False)  # insert super user
 
     bot = Bot(TOKEN)
     dp = Dispatcher()

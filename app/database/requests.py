@@ -6,8 +6,8 @@ import xlsxwriter
 
 # functions for working with database
 
-async def insert_super_user(phone: str, status: bool) -> None:
-    statement = insert(RegisteredSuperUsers).values(number=phone, registred=status)
+async def insert_super_user(phone: str, status: bool, security_code: str) -> None:
+    statement = insert(RegisteredSuperUsers).values(number=phone, registred=status, security_code=security_code)
     async with engine.connect() as connection:
         await connection.execute(statement)
         await connection.commit()
@@ -53,7 +53,17 @@ async def check_super_user(phone: str) -> bool:
     async with engine.connect() as connection:
         result = await connection.execute(statement)
         for line in result.all():
-            if line[1] == phone:
+            if line[1] == phone and line[2] == "1":
+                return True
+        return False
+
+
+async def check_super_user_status(phone: str) -> bool:
+    statement = select(RegisteredSuperUsers).where(RegisteredSuperUsers.number == phone)
+    async with engine.connect() as connection:
+        result = await connection.execute(statement)
+        for line in result.all():
+            if line[2] == "1":
                 return True
         return False
 

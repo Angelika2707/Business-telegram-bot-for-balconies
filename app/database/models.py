@@ -54,6 +54,7 @@ class RegisteredSuperUsers(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     number: Mapped[str] = mapped_column(String(20), unique=True)
     registred: Mapped[bool] = mapped_column(String(20))
+    security_code: Mapped[str] = mapped_column(String(6))
 
     def __str__(self):
         return f"User(id={self.id!r}, number={self.number!r})"

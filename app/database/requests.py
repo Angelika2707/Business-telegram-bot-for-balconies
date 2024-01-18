@@ -68,6 +68,17 @@ async def check_super_user_status(phone: str) -> bool:
         return False
 
 
+async def check_super_user_security_code(phone: str, security_code: str) -> bool:
+    statement = select(RegisteredSuperUsers).where(RegisteredSuperUsers.number == phone)
+    async with engine.connect() as connection:
+        result = await connection.execute(statement)
+        for line in result.all():
+            print(line)
+            if line[3] == security_code:
+                return True
+        return False
+
+
 async def delete_unregistered_user(phone: str) -> None:
     statement = delete(UnregisteredUsers).where(UnregisteredUsers.number == phone)
     async with engine.connect() as connection:

@@ -53,7 +53,7 @@ async def check_super_user(phone: str) -> bool:
     async with engine.connect() as connection:
         result = await connection.execute(statement)
         for line in result.all():
-            if line[1] == phone and line[2] == "1":
+            if line[1] == phone:
                 return True
         return False
 

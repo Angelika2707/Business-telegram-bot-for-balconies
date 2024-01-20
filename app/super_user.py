@@ -5,8 +5,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 import app.database.requests as db
 
-codes = ["000000"]
-
 
 # File for handles commands from super users
 
@@ -28,18 +26,10 @@ router_super_users = Router()
 async def give_permission(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     phone_number = data.get("phone_number")
-    if await db.check_registered_user(phone_number):
-        await db.delete_user(phone_number)
-        await db.delete_super_user(phone_number)
-        await db.insert_super_user(phone_number, True)
-        await callback.message.answer("Теперь Вам доступны возможности суперпользователя")
-        await state.set_state(SuperUserStates.main_menu)
-        await callback.message.answer(menu_text())
-    else:
-        await callback.message.answer("Пожалуйста, введите шестизначный код подтверждения, полученный от одного из "
-                                      "суперпользователей")
-        await state.set_state(SuperUserStates.check_code)
-        await state.update_data(phone_number=phone_number)
+    await callback.message.answer("Пожалуйста, введите шестизначный код подтверждения, полученный от суперпользователя,"
+                                  "который Вас добавил")
+    await state.set_state(SuperUserStates.check_code)
+    await state.update_data(phone_number=phone_number)
 
 
 def menu_text() -> str:
@@ -48,8 +38,7 @@ def menu_text() -> str:
             "/add_super_user - Добавить суперпользователя\n"
             "/delete_user - Удалить пользователя\n"
             "/delete_super_user - Удалить суперпользователя\n"
-            "/get_table - Получить таблицу с данными и ответами партнёров в формате xlsx\n"
-            "/generate_code - Сгенерировать код подтверждения для нового суперпользователя")
+            "/get_table - Получить таблицу с данными и ответами партнёров в формате xlsx")
 
 
 @router_super_users.message(F.text == '/menu')
@@ -58,25 +47,16 @@ async def go_to_menu(message: Message, state: FSMContext):
     await message.answer(menu_text())
 
 
-@router_super_users.message(F.text == '/generate_code')
-async def generate_code(message: Message, state: FSMContext):
-    code = secrets.randbelow(10 ** 6)
-    codes.append(str(code))
-    await state.set_state(SuperUserStates.main_menu)
-    await message.answer(f"Код подтверждения, созданный вами: {code}. Покажите его суперпользователю, которого хотите "
-                         f"добавить")
-    await message.answer(menu_text())
-
-
 @router_super_users.message(SuperUserStates.check_code)
 async def check_code(message: Message, state: FSMContext):
     user_code = message.text
-    if user_code in codes:
-        data = await state.get_data()
-        phone_number = data.get("phone_number")
+    data = await state.get_data()
+    phone_number = data.get("phone_number")
+    if await db.check_super_user_security_code(phone_number, user_code):
+        if await db.check_registered_user(phone_number):
+            await db.delete_user(phone_number)
         await db.delete_super_user(phone_number)
-        await db.insert_super_user(phone_number, True)
-        codes.remove(user_code)
+        await db.insert_super_user(phone_number, True, user_code)
         await message.answer("Код верный. Теперь Вам доступны возможности суперпользователя")
         await state.set_state(SuperUserStates.main_menu)
         await message.answer(menu_text())
@@ -88,7 +68,7 @@ async def check_code(message: Message, state: FSMContext):
 @router_super_users.message(F.text == "/add_user")
 async def process_data_add_user(message: Message, state: FSMContext):
     await message.answer("Введите номер телефона пользователя, которого хотите добавить, либо /menu, "
-                                  "чтобы отменить действие")
+                                  "чтобы отменить действие.\nФормат ввода: 8XXXXXXXXXX")
     await state.set_state(SuperUserStates.add_user)
 
 
@@ -106,7 +86,7 @@ async def add_user(message: Message, state: FSMContext):
 @router_super_users.message(F.text == "/add_super_user")
 async def process_data_add_super_user(message: Message, state: FSMContext):
     await message.answer("Введите номер телефона суперпользователя, которого хотите добавить, либо /menu, "
-                                  "чтобы отменить действие")
+                                  "чтобы отменить действие.\nФормат ввода: 8XXXXXXXXXX")
     await state.set_state(SuperUserStates.add_super_user)
 
 
@@ -115,7 +95,12 @@ async def add_super_user(message: Message, state: FSMContext):
     if await db.check_super_user(message.text):
         await message.answer(f"Суперпользователь с номером телефона {message.text} уже существует")
     else:
-        await db.insert_super_user(message.text, False)
+        code = secrets.randbelow(10 ** 6)
+        await message.answer(
+            f"Код подтверждения для нового суперпользователя: *{code}*\n"
+            f"Пожалуйста, передайте данный код суперпользователю, которого желаете добавить. Он будет необходим в "
+            f"процессе регистрации", parse_mode="Markdown")
+        await db.insert_super_user(message.text, False, str(code))
         await message.answer(f"Суперпользователь с номером телефона {message.text} успешно добавлен")
     await state.set_state(SuperUserStates.main_menu)
     await message.answer(menu_text())
@@ -124,7 +109,7 @@ async def add_super_user(message: Message, state: FSMContext):
 @router_super_users.message(F.text == "/delete_user")
 async def process_data_delete_user(message: Message, state: FSMContext):
     await message.answer("Введите номер телефона пользователя, которого хотите удалить, либо /menu, "
-                                  "чтобы отменить действие")
+                                  "чтобы отменить действие.\nФормат ввода: 8XXXXXXXXXX")
     await state.set_state(SuperUserStates.delete_user)
 
 
@@ -145,7 +130,7 @@ async def delete_user(message: Message, state: FSMContext):
 @router_super_users.message(F.text == "/delete_super_user")
 async def process_data_delete__super_user(message: Message, state: FSMContext):
     await message.answer("Введите номер телефона суперпользователя, которого хотите удалить, либо /menu, "
-                                  "чтобы отменить действие")
+                                  "чтобы отменить действие.\nФормат ввода: 8XXXXXXXXXX")
     await state.set_state(SuperUserStates.delete_super_user)
 
 
